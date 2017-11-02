@@ -5,6 +5,11 @@
   "author": "phaux <phaux4@gmail.com>",
   "repository": "phaux/surf",
   "license": "ISC",
+  "keywords": [
+    "webcomponents",
+    "observable",
+    "frp"
+  ],
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
   "module": "module/index.js",
