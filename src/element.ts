@@ -1,5 +1,4 @@
-import { Observable, Behavior } from 'impulsejs'
-import { Observer } from 'impulsejs/dist/types'
+import { Observable, Behavior, IObserver } from 'impulsejs'
 import {
   SERIALIZE, DESERIALIZE, CAST, DEFAULT,
   toAttrName, toPropName, toEventName,
@@ -31,7 +30,7 @@ export class Element extends HTMLElement {
     this._ignoreOutput(attr, () => $.next(value))
   }
 
-  render(cb: (parent: ShadowRoot, vdom: JSX.Element) => any): Observer<JSX.Element> {
+  render(cb: (parent: ShadowRoot, vdom: JSX.Element) => any): IObserver<JSX.Element> {
     if (!this.shadowRoot) this.attachShadow({mode: 'open'})
     return {
       next: vdom => {
@@ -107,8 +106,8 @@ export class Element extends HTMLElement {
 
   }
 
-  output<T extends keyof TypeMap>(name: string, type: T): Observer<TypeMap[T]>
-  output(name: string, type: keyof TypeMap = 'any'): Observer<any> {
+  output<T extends keyof TypeMap>(name: string, type: T): IObserver<TypeMap[T]>
+  output(name: string, type: keyof TypeMap = 'any'): IObserver<any> {
 
     if (!(type in CAST)) throw new TypeError(`Invalid type "${type}" for output "${name}"`)
 
