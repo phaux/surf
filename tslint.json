@@ -1,0 +1,43 @@
+{
+  "extends": "tslint:recommended",
+  "rules": {
+    "align": [true, "statements", "members", "elements"],
+    "arrow-parens": [true, "ban-single-arg-parens"],
+    "curly": false,
+    "interface-name": false,
+    "max-classes-per-file": false,
+    "member-access": [true, "no-public"],
+    "member-ordering": false,
+    "new-parens": false,
+    "no-any": false,
+    "no-console": false,
+    "no-empty": false,
+    "no-inferred-empty-object-type": false,
+    "no-namespace": [true, "allow-declarations"],
+    "no-shadowed-variable": false,
+    "no-unsafe-any": false,
+    "object-literal-sort-keys": false,
+    "one-line": false,
+    "ordered-imports": false,
+    "prefer-template": false,
+    "quotemark": false,
+    "restrict-plus-operands": false,
+    "semicolon": [true, "never"],
+    "strict-boolean-expressions": false,
+    "strict-type-predicates": false,
+    "trailing-comma": [
+      true,
+      {
+        "multiline": {
+          "objects": "always",
+          "arrays": "always",
+          "functions": "ignore",
+          "typeLiterals": "always"
+        },
+        "singleline": "never"
+      }
+    ],
+    "triple-equals": false,
+    "variable-name": false
+  }
+}

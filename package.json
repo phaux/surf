@@ -1,0 +1,29 @@
+{
+  "name": "surfjs",
+  "version": "0.0.0",
+  "description": "Surf is a functional reactive abstraction over Web Components",
+  "author": "phaux <phaux4@gmail.com>",
+  "repository": "phaux/surf",
+  "license": "ISC",
+  "main": "dist/index.js",
+  "typings": "dist/index.d.ts",
+  "module": "module/index.js",
+  "scripts": {
+    "prepare": "run-p -l -s prepare:*",
+    "prepare:module": "tsc -p . -m es2015 -t es2017 --outDir module",
+    "prepare:umd": "tsc -p . -m umd -t es2015 --outDir dist",
+    "prepublishOnly": "npm test",
+    "test": "tslint -p .",
+    "watch": "run-p -l -s watch:**",
+    "watch:prepare:module": "tsc -w -p . -m es2015 -t es2017 --outDir module",
+    "watch:prepare:umd": "tsc -w -p . -m umd -t es2015 --outDir dist"
+  },
+  "devDependencies": {
+    "npm-run-all": "^4.1.1",
+    "tslint": "^5.8.0",
+    "typescript": "^2.5.3"
+  },
+  "dependencies": {
+    "impulsejs": "^0.3.0"
+  }
+}
