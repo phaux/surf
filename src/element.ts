@@ -75,7 +75,7 @@ export class Element extends HTMLElement {
     const prop = toPropName(name)
     const attr = toAttrName(name)
 
-    if (this._inputs[attr]) return this._inputs[attr].$
+    if (this._inputs[attr]) return Observable.from(this._inputs[attr].$)
 
     let init
     if (ATTR_TYPES.indexOf(type) >= 0) {
@@ -102,7 +102,7 @@ export class Element extends HTMLElement {
     })
 
     this._inputs[attr] = ({type, $})
-    return $
+    return Observable.from($)
 
   }
 

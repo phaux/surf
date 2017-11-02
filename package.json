@@ -29,6 +29,6 @@
     "typescript": "^2.5.3"
   },
   "dependencies": {
-    "impulsejs": "^0.4.0"
+    "impulsejs": "^0.5.0"
   }
 }
