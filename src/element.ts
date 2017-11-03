@@ -26,18 +26,18 @@ export class Element extends HTMLElement {
     const {type, $} = this._inputs[attr]
     if (ATTR_TYPES.indexOf(type) < 0) return
     const value = next === null ? DEFAULT[type] : DESERIALIZE[type](next)
-    if (this._debug) console.log(this.tagName, 'attr', attr, '<-', value)
+    this._log('input', {name, value})
     this._ignoreOutput(attr, () => $.next(value))
   }
 
   render(cb: (parent: ShadowRoot, vdom: JSX.Element) => any): IObserver<JSX.Element> {
     if (!this.shadowRoot) this.attachShadow({mode: 'open'})
     return {
-      next: vdom => {
-        cb(this.shadowRoot!, vdom)
-        if (this._debug) console.log(this.tagName, 'render')
+      next: dom => {
+        cb(this.shadowRoot!, dom)
+        this._log('render', {dom})
       },
-      error: err => console.error(this.tagName, 'error', err),
+      error: error => this._log('render error', {error}),
     }
   }
 
@@ -55,7 +55,7 @@ export class Element extends HTMLElement {
       const cb = (ev: Event) => {
         for (let el = ev.target as HTMLElement; el; el = el.parentElement!) {
           if (el.matches(selector)) {
-            if (this._debug) console.log(this.tagName, 'event', selector, event, '<-', ev)
+            this._log('event', {name: `${selector} ${event}`, ev, el})
             ev.preventDefault()
             emit.next({ev, el})
             break
@@ -82,21 +82,20 @@ export class Element extends HTMLElement {
       init = this.hasAttribute(attr)
         ? DESERIALIZE[type](this.getAttribute(attr)!)
         : DEFAULT[type]
-      if (this._debug) console.log(this.tagName, 'attr', attr, '<-', init)
     }
     if (this.hasOwnProperty(prop)) {
       init = CAST[type]((this as {[prop: string]: any})[prop])
-      if (this._debug) console.log(this.tagName, 'prop', prop, '<-', init)
     }
-
+    this._log('input', {name, value: init})
     const $ = new Behavior(init)
 
     Object.defineProperty(this, prop, {
       get: () => $.value,
       set: value => {
         if (this._processInput && value !== $.value) {
-          if (this._debug) console.log(this.tagName, 'prop', prop, '<-', value)
-          this._ignoreOutput(attr, () => $.next(CAST[type](value)))
+          const inputValue = CAST[type](value)
+          this._log('input', {name, value: inputValue})
+          this._ignoreOutput(attr, () => $.next(inputValue))
         }
       },
     })
@@ -120,12 +119,11 @@ export class Element extends HTMLElement {
 
         const propValue = CAST[type](value)
 
-        if (this._debug) console.log(this.tagName, 'prop', prop, '->', propValue)
+        this._log('output', {name, value: propValue})
         this[prop] = value
 
         if (ATTR_TYPES.indexOf(type) >= 0) {
           const attrValue = SERIALIZE[type](value)
-          if (this._debug) console.log(this.tagName, 'attr', attr, '->', attrValue)
           if (attrValue === null) this.removeAttribute(attr)
           else this.setAttribute(attr, attrValue)
         }
@@ -135,11 +133,11 @@ export class Element extends HTMLElement {
             detail: propValue,
             bubbles: true,
           })
-          if (this._debug) console.log(this.tagName, 'event', event, '->', ev)
           this.dispatchEvent(ev)
         }
 
       }),
+      error: error => this._log('output error', {name, error}),
     }
 
   }
@@ -156,6 +154,28 @@ export class Element extends HTMLElement {
     finally {
       this._ignoredOutputs = this._ignoredOutputs.filter(o => o != output)
     }
+  }
+
+  private _log(type: string, {name, value, error, ...details}: {[opt: string]: any}) {
+
+    if (this._debug || error) {
+
+      let s = `<${this.tagName.toLowerCase()}> ${type.toUpperCase()}`
+
+      if (name && value) s += ` ${name} = ${JSON.stringify(value)}`
+      else if (name) s += ` ${name}`
+
+      if (error) console.group(s)
+      else console.groupCollapsed(s)
+
+      console.log(this)
+      if (error) console.error(error)
+      Object.keys(details).forEach(k => console.log(`${k}:`, details[k]))
+
+      console.groupEnd()
+
+    }
+
   }
 
 }
