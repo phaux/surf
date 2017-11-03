@@ -119,12 +119,12 @@ export class Element extends HTMLElement {
       next: value => this._ignoreInputs(() => {
 
         const propValue = CAST[type](value)
-        const attrValue = SERIALIZE[type](value)
 
         if (this._debug) console.log(this.tagName, 'prop', prop, '->', propValue)
         this[prop] = value
 
         if (ATTR_TYPES.indexOf(type) >= 0) {
+          const attrValue = SERIALIZE[type](value)
           if (this._debug) console.log(this.tagName, 'attr', attr, '->', attrValue)
           if (attrValue === null) this.removeAttribute(attr)
           else this.setAttribute(attr, attrValue)
