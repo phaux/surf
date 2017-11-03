@@ -8,8 +8,6 @@ export const toAttrName = (str: string) =>
 export const toEventName = (str: string) =>
   str.replace(/\W/g, '').toLowerCase()
 
-export const ATTR_TYPES = ['string', 'number', 'boolean']
-
 export interface TypeMap {
   string: string
   number: number

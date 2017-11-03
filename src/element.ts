@@ -2,7 +2,7 @@ import { Observable, Behavior, IObserver } from 'impulsejs'
 import {
   SERIALIZE, DESERIALIZE, CAST, DEFAULT,
   toAttrName, toPropName, toEventName,
-  ATTR_TYPES, TypeMap, JSX,
+  TypeMap, JSX,
 } from './types'
 
 export class Element extends HTMLElement {
@@ -24,7 +24,7 @@ export class Element extends HTMLElement {
     if (prev === next) return
     if (!this._inputs[attr]) return
     const {type, $} = this._inputs[attr]
-    if (ATTR_TYPES.indexOf(type) < 0) return
+    if (type == 'any') return
     const value = next === null ? DEFAULT[type] : DESERIALIZE[type](next)
     this._log('input', {name, value})
     this._ignoreOutput(attr, () => $.next(value))
@@ -78,7 +78,7 @@ export class Element extends HTMLElement {
     if (this._inputs[attr]) return Observable.from(this._inputs[attr].$)
 
     let init
-    if (ATTR_TYPES.indexOf(type) >= 0) {
+    if (type != 'any') {
       init = this.hasAttribute(attr)
         ? DESERIALIZE[type](this.getAttribute(attr)!)
         : DEFAULT[type]
@@ -118,16 +118,22 @@ export class Element extends HTMLElement {
       next: value => this._ignoreInputs(() => {
 
         const propValue = CAST[type](value)
+        const attrValue = type == 'any' ? null : SERIALIZE[type](value)
+
+        // skip when prop value is the same
+        if (this[prop] === propValue) return
+        // skip when attr value is the same
+        if (type != 'any' && this.getAttribute(attr) == attrValue) return
 
         this._log('output', {name, value: propValue})
         this[prop] = value
 
-        if (ATTR_TYPES.indexOf(type) >= 0) {
-          const attrValue = SERIALIZE[type](value)
+        if (type != 'any') {
           if (attrValue === null) this.removeAttribute(attr)
           else this.setAttribute(attr, attrValue)
         }
 
+        // don't emit event when it comes from the input with the same name
         if (this._ignoredOutputs.every(output => output != attr)) {
           const ev = new CustomEvent(event, {
             detail: propValue,
