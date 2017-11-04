@@ -32,10 +32,14 @@ export class Element extends HTMLElement {
 
   render(cb: (parent: ShadowRoot, vdom: JSX.Element) => any): IObserver<JSX.Element> {
     if (!this.shadowRoot) this.attachShadow({mode: 'open'})
+    let timeout
     return {
       next: dom => {
-        cb(this.shadowRoot!, dom)
-        this._log('render', {dom})
+        if (timeout) clearTimeout(timeout)
+        timeout = setTimeout(() => {
+          this._log('render', {dom})
+          cb(this.shadowRoot!, dom)
+        }, 1)
       },
       error: error => this._log('render error', {error}),
     }
