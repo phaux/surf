@@ -120,11 +120,6 @@ export class Element extends HTMLElement {
         const propValue = CAST[type](value)
         const attrValue = type == 'any' ? null : SERIALIZE[type](value)
 
-        // skip when prop value is the same
-        if (this[prop] === propValue) return
-        // skip when attr value is the same
-        if (type != 'any' && this.getAttribute(attr) == attrValue) return
-
         this._log('output', {name, value: propValue})
         this[prop] = value
 
@@ -133,14 +128,18 @@ export class Element extends HTMLElement {
           else this.setAttribute(attr, attrValue)
         }
 
+        // skip when prop value is the same
+        if (type != 'any' && this[prop] === propValue) return
+        // skip when attr value is the same
+        if (type != 'any' && this.getAttribute(attr) === attrValue) return
         // don't emit event when it comes from the input with the same name
-        if (this._ignoredOutputs.every(output => output != attr)) {
-          const ev = new CustomEvent(event, {
-            detail: propValue,
-            bubbles: true,
-          })
-          this.dispatchEvent(ev)
-        }
+        if (this._ignoredOutputs.some(o => o == attr)) return
+
+        const ev = new CustomEvent(event, {
+          detail: propValue,
+          bubbles: true,
+        })
+        this.dispatchEvent(ev)
 
       }),
       error: error => this._log('output error', {name, error}),
@@ -168,7 +167,7 @@ export class Element extends HTMLElement {
 
       let s = `<${this.tagName.toLowerCase()}> ${type.toUpperCase()}`
 
-      if (name && value) s += ` ${name} = ${JSON.stringify(value)}`
+      if (name && value !== undefined) s += ` ${name} = ${JSON.stringify(value)}`
       else if (name) s += ` ${name}`
 
       if (error) console.group(s)
