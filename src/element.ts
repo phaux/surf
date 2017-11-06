@@ -5,6 +5,9 @@ import {
   TypeMap, JSX,
 } from './types'
 
+/**
+ * Reactive Component base class
+ */
 export class Element extends HTMLElement {
 
   private _processInput = true
@@ -30,6 +33,16 @@ export class Element extends HTMLElement {
     this._ignoreOutput(attr, () => $.next(value))
   }
 
+  /**
+   * Obtains a render observer.
+   *
+   * It will render virtual DOM into the element's shadow root.
+   * Every event observed schedules a rerender on next tick.
+   * Actual renderer function must be specified (e.g. `IncrementalDOM.patch`).
+   *
+   * @param cb Renderer function
+   * @return Observer of virtual DOM events
+   */
   render(cb: (parent: ShadowRoot, vdom: JSX.Element) => any): IObserver<JSX.Element> {
     if (!this.shadowRoot) this.attachShadow({mode: 'open'})
     let timeout
@@ -45,6 +58,17 @@ export class Element extends HTMLElement {
     }
   }
 
+  /**
+   * Obtains a stream of events coming from element's shadow DOM.
+   *
+   * Registers an event listener for specified event name on the element's shadow root.
+   * If the event target or any of it's parents matches the specified CSS selector,
+   * an object of matched element and DOM event is emitted.
+   *
+   * @param selector
+   * @param event
+   * @return Stream of events
+   */
   event<
     T extends keyof HTMLElementTagNameMap,
     E extends keyof HTMLElementEventMap
@@ -71,6 +95,21 @@ export class Element extends HTMLElement {
     })
   }
 
+  /**
+   * Obtains a stream of input value changes, which emits values of given property/attribute.
+   *
+   * Type argument is used to (de)serialize value to/from attribute value.
+   * Note that values of type `any` can't be passed via attribute (changes are ignored).
+   *
+   * Also note that this won't sync property and attribute values.
+   * You should instead loop back the stream to the corresponding `output` observer.
+   *
+   * Changes made by element itself via output observer won't generate an input stream event.
+   *
+   * @param name Property/attribute name
+   * @param type Type of input's values
+   * @return Stream of values
+   */
   input<T extends keyof TypeMap>(name: string, type: T): Observable<TypeMap[T]>
   input(name: string, type: keyof TypeMap = 'any'): Observable<any> {
 
@@ -109,6 +148,22 @@ export class Element extends HTMLElement {
 
   }
 
+  /**
+   * Obtains an observer of output values, which controls the value of given property/attribute.
+   * Additionally a DOM event with the same name will be emitted upon value change.
+   *
+   * Type argument is used to (de)serialize value to/from attribute value.
+   * Note that values of type `any` won't be reflected as attribute.
+   *
+   * Changes won't trigger corresponding input event in order to prevent infinite loop.
+   *
+   * Also a DOM event won't be emitted when a change was caused by corresponding input.
+   * I.e. setting element's property `foo` won't cause the same element to emit DOM event `foo`.
+   *
+   * @param {string} name
+   * @param {keyof TypeMap = 'any'} type
+   * @return {IObserver<any>}
+   */
   output<T extends keyof TypeMap>(name: string, type: T): IObserver<TypeMap[T]>
   output(name: string, type: keyof TypeMap = 'any'): IObserver<any> {
 
