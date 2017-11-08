@@ -1,4 +1,4 @@
-import { Observable, Behavior, IObserver } from 'impulsejs'
+import {Stream, Listener, MemoryStream} from 'xstream'
 import {
   SERIALIZE, DESERIALIZE, CAST, DEFAULT,
   toAttrName, toPropName, toEventName,
@@ -15,7 +15,7 @@ export class Element extends HTMLElement {
   _debug = false
 
   private _inputs: {
-    [attr: string]: {type: keyof TypeMap, $: Behavior<any>},
+    [attr: string]: {type: keyof TypeMap, $: Stream<any>},
   } = {}
 
   private attributeChangedCallback(
@@ -30,7 +30,7 @@ export class Element extends HTMLElement {
     if (type == 'any') return
     const value = next === null ? DEFAULT[type] : DESERIALIZE[type](next)
     this._log('input', {name, value})
-    this._ignoreOutput(attr, () => $.next(value))
+    this._ignoreOutput(attr, () => $.shamefullySendNext(value))
   }
 
   /**
@@ -43,7 +43,7 @@ export class Element extends HTMLElement {
    * @param cb Renderer function
    * @return Observer of virtual DOM events
    */
-  render(cb: (parent: ShadowRoot, vdom: JSX.Element) => any): IObserver<JSX.Element> {
+  render(cb: (parent: ShadowRoot, vdom: JSX.Element) => any): Listener<JSX.Element> {
     if (!this.shadowRoot) this.attachShadow({mode: 'open'})
     let timeout
     return {
@@ -55,6 +55,7 @@ export class Element extends HTMLElement {
         }, 1)
       },
       error: error => this._log('render error', {error}),
+      complete: () => this._log('render complete', {}),
     }
   }
 
@@ -75,23 +76,31 @@ export class Element extends HTMLElement {
   >(
     selector: T,
     event: E,
-  ): Observable<{ev: HTMLElementEventMap[E], el: HTMLElementTagNameMap[T]}>
-  event(selector: string, event: string): Observable<{ev: CustomEvent, el: HTMLElement}>
-  event(selector: string, event: string): Observable<{ev: Event, el: HTMLElement}> {
-    return new Observable(emit => {
-      const shadow = this.shadowRoot || this.attachShadow({mode: 'open'})
-      const cb = (ev: Event) => {
-        for (let el = ev.target as HTMLElement; el; el = el.parentElement!) {
-          if (el.matches(selector)) {
-            this._log('event', {name: `${selector} ${event}`, ev, el})
-            ev.preventDefault()
-            emit.next({ev, el})
-            break
-          }
+  ): Stream<{ev: HTMLElementEventMap[E], el: HTMLElementTagNameMap[T]}>
+  event(selector: string, event: string): Stream<{ev: CustomEvent, el: HTMLElement}>
+  event(selector: string, event: string): Stream<{ev: Event, el: HTMLElement}> {
+    const shadow = this.shadowRoot || this.attachShadow({mode: 'open'})
+    let emit
+    const cb = (ev: Event) => {
+      for (let el = ev.target as HTMLElement; el; el = el.parentElement!) {
+        if (el.matches(selector)) {
+          this._log('event', {name: `${selector} ${event}`, ev, el})
+          ev.preventDefault()
+          emit.next({ev, el})
+          break
         }
       }
-      shadow.addEventListener(event, cb)
-      return () => shadow.removeEventListener(event, cb)
+    }
+    return Stream.create({
+      start: e => {
+        this._log('event start', {name: `${selector} ${event}`})
+        emit = e
+        shadow.addEventListener(event, cb)
+      },
+      stop: () => {
+        this._log('event stop', {name: `${selector} ${event}`})
+        shadow.removeEventListener(event, cb)
+      },
     })
   }
 
@@ -110,15 +119,15 @@ export class Element extends HTMLElement {
    * @param type Type of input's values
    * @return Stream of values
    */
-  input<T extends keyof TypeMap>(name: string, type: T): Observable<TypeMap[T]>
-  input(name: string, type: keyof TypeMap = 'any'): Observable<any> {
+  input<T extends keyof TypeMap>(name: string, type: T): Stream<TypeMap[T]>
+  input(name: string, type: keyof TypeMap = 'any'): Stream<any> {
 
     if (!(type in CAST)) throw new TypeError(`Invalid type "${type}" for input "${name}"`)
 
     const prop = toPropName(name)
     const attr = toAttrName(name)
 
-    if (this._inputs[attr]) return Observable.from(this._inputs[attr].$)
+    if (this._inputs[attr]) return this._inputs[attr].$
 
     let init
     if (type != 'any') {
@@ -130,21 +139,21 @@ export class Element extends HTMLElement {
       init = CAST[type]((this as {[prop: string]: any})[prop])
     }
     this._log('input', {name, value: init})
-    const $ = new Behavior(init)
+    const $ = MemoryStream.create()
 
     Object.defineProperty(this, prop, {
-      get: () => $.value,
+      get: () => ($ as any)._v,
       set: value => {
-        if (this._processInput && value !== $.value) {
+        if (this._processInput && value !== ($ as any)._v) {
           const inputValue = CAST[type](value)
           this._log('input', {name, value: inputValue})
-          this._ignoreOutput(attr, () => $.next(inputValue))
+          this._ignoreOutput(attr, () => $.shamefullySendNext(inputValue))
         }
       },
     })
 
     this._inputs[attr] = ({type, $})
-    return Observable.from($)
+    return $
 
   }
 
@@ -162,10 +171,10 @@ export class Element extends HTMLElement {
    *
    * @param {string} name
    * @param {keyof TypeMap = 'any'} type
-   * @return {IObserver<any>}
+   * @return {Listener<any>}
    */
-  output<T extends keyof TypeMap>(name: string, type: T): IObserver<TypeMap[T]>
-  output(name: string, type: keyof TypeMap = 'any'): IObserver<any> {
+  output<T extends keyof TypeMap>(name: string, type: T): Listener<TypeMap[T]>
+  output(name: string, type: keyof TypeMap = 'any'): Listener<any> {
 
     if (!(type in CAST)) throw new TypeError(`Invalid type "${type}" for output "${name}"`)
 
@@ -202,6 +211,7 @@ export class Element extends HTMLElement {
 
       }),
       error: error => this._log('output error', {name, error}),
+      complete: () => this._log('output complete', {name}),
     }
 
   }
