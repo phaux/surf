@@ -160,9 +160,9 @@ export class Element extends HTMLElement {
    * Also a DOM event won't be emitted when a change was caused by corresponding input.
    * I.e. setting element's property `foo` won't cause the same element to emit DOM event `foo`.
    *
-   * @param {string} name
-   * @param {keyof TypeMap = 'any'} type
-   * @return {IObserver<any>}
+   * @param name Property/attribute name
+   * @param type Type of input's values
+   * @return Observer of values
    */
   output<T extends keyof TypeMap>(name: string, type: T): IObserver<TypeMap[T]>
   output(name: string, type: keyof TypeMap = 'any'): IObserver<any> {
